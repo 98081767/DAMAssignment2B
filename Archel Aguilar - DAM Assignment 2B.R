@@ -82,8 +82,6 @@ set.seed(42)
 #splits sample group maintaining the ratio of the target
 train = createDataPartition(y = cpur$Target, p = 0.7, list = F)
 
-nrow(train)
-nrow(cpur)
 
 # partition purchase data into two sets 
 training = cpur[train, ]
@@ -91,17 +89,32 @@ testing = cpur[-train, ]
 str(training)
 str(testing)
 
+nrow(cpur)     #131,337
+nrow(training)  #91,937
+nrow(testing)   #39,400
+
+nrow(cpur[cpur$Target=="1",]) #3521 - number of targets
+nrow(cpur[cpur$Target=="0",]) #127816 - number of non targets
+#proportion of targets in data = 0.0268
+
+nrow(training[training$Target=="1",]) #2465 - targets in trainng
+nrow(training[training$Target=="0",]) #89472 - non targets in training
+#proportion of targets in data = 0.0268
+
 
 #---------------------------
 # Create models
 #---------------------------
+glmodel = "Target ~. -ID" #all variables
+#glmodel = "Target ~ gender - ID"
 
 #include all except for identifier (ID)
-cpur.glm = glm(formula = Target ~. -ID,
+cpur.glm = glm(formula = glmodel,
              data = training,
              family = "binomial")
 summary(cpur.glm)
 #AIC: 9016
+
 
 ###########################
 # Create probabilities and predictions
@@ -113,7 +126,8 @@ testing$probability = predict(cpur.glm, newdata = testing, type = "response")
 # assume that the optimum probability threshold is 0.5
 # Create the class prediction - our target is 1
 testing$prediction = "0"
-testing[testing$probability >= 0.6, "prediction"] = "1"
+testing[testing$probability >= 0.5, "prediction"] = "1"
+
 
 # Have a look at the data
 #head(testing)
@@ -130,29 +144,17 @@ myPred = as.factor(testing$prediction)
 #testing$prediction
 #testing$Target
 
-cm = confusionMatrix(data = myPred, testing$Target)
+#set Target=1 as the focus for confusion matrix
+cm = confusionMatrix(data = myPred, testing$Target, positive="1")
+#get F1 score
+cm$byClass["F1"] #0.6553341
 
-#--ned to create function get calculate F1 score
-
-
-getScores = function (mycm) {
-  mymat = NULL
-  mymat$TP = mycm$table[1,1]
-  mymat$FN = mycm$table[2,1]
-  mymat$FP = mycm$table[1,2]
-  mymat$TN = mycm$table[2,2]
-  mymat$accuracy = (mymat$TP + mymat$TN)/(mymat$TP+mymat$FN+mymat$FP+mymat$TN)
-  mymat$precision = (mymat$TP)/(mymat$TP+mymat$FP)
-  mymat$recall = (mymat$TP)/(mymat$TP+mymat$FN)
-  mymat$f1 = 2*((mymat$precision*mymat$recall)/(mymat$precision+mymat$recall))
-  
-  return(mymat)
-}
-
+#summary
+cm
 #                 Reference
-# Prediction        0           1
-#             0 38253 (TP)   497 (FP)
-#             1    91 (FN)  559  (TN)
+# Prediction      0     1
+#           0 38253   497
+#           1    91   559     
 # 
 # Accuracy : 0.9851          
 # 95% CI : (0.9838, 0.9863)
@@ -162,31 +164,16 @@ getScores = function (mycm) {
 # Kappa : 0.6481          
 # Mcnemar's Test P-Value : < 2.2e-16       
 # 
-# Sensitivity : 0.9976          
-# Specificity : 0.5294          
-# Pos Pred Value : 0.9872          
-# Neg Pred Value : 0.8600          
-# Prevalence : 0.9732          
-# Detection Rate : 0.9709          
-# Detection Prevalence : 0.9835          
-# Balanced Accuracy : 0.7635          
+# Sensitivity : 0.52936         
+# Specificity : 0.99763         
+# Pos Pred Value : 0.86000         
+# Neg Pred Value : 0.98717         
+# Prevalence : 0.02680         
+# Detection Rate : 0.01419         
+# Detection Prevalence : 0.01650         
+# Balanced Accuracy : 0.76349         
 # 
-# 'Positive' Class : 0     
-
-#Accuracy: 
-accuracy = (38253+559)/(38253+497+91+559)
-#Precision
-precision = (38253)/(38253+497)
-#recall
-recall = (38253)/(38253+91)
-#F1 (aim to be around 0.5)
-f1 = 2 * (precision * recall) / (precision + recall)
-#0.9923729
-
-
-
-
-
+# 'Positive' Class : 1     
 
 
 
