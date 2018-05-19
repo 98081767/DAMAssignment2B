@@ -109,12 +109,14 @@ nrow(training[training$Target=="0",]) #89472 - non targets in training
 # Create models
 #---------------------------
 
+#Precision:Positive Pred Value
+#Recall:Sensitivtiy
+
 #include all except for identifier (ID)
-glmodel = "Target ~. -ID" #all variables (AIC: 9078, F1: 0.660561, sensitivity: 0.54640)
+glmodel = "Target ~. -ID" #all variables (AIC: 9078, F1: 0.660561, sensitivity/recall: 0.54640, precision/pos pred value: 0.83502)
 
 #glmodel = "Target ~ -ID + gender + car_model + age_of_vehicle_years + sched_serv_warr + non_sched_serv_warr + sched_serv_paid + non_sched_serv_paid + total_services + mth_since_last_serv + annualised_mileage + num_dealers_visited + num_serv_dealer_purchased"
 #(AIC: 9118, F1: 0.6613181, sensitivity: 0.54640)
-
 #glmodel = "Target ~ gender - ID" (AIC: 22569, F1: NA, sensitivity: 0.0000)
 
 cpur.glm = glm(formula = glmodel,
@@ -180,7 +182,7 @@ install.packages("glmnet")
 library(glmnet)
 
 ###########################
-# Lasso Regression (F1 - 0.6524002, sensitivity: 0.53409)
+# Lasso Regression (F1 - 0.6524002, sensitivity/recall: 0.53409, precision/pos pred value: 0.83804)
 ###########################
 
 #reset variables
@@ -236,7 +238,7 @@ lasso_confusion
 lasso_confusion$byClass["F1"] #0.6524002
 
 ###########################
-# Ridge Regression (F1 - 0.4292893, sensitivity - 0.283144)
+# Ridge Regression (F1: 0.4292893, sensitivity/recall: 0.283144, precision/pos pred value: 0.887240)
 ###########################
 
 #reset variables
@@ -294,6 +296,145 @@ ridge_confusion
 # 'Positive' Class : 1  
 
 ridge_confusion$byClass["F1"] #0.4292893 
+
+#-------------------------------------------
+# Tree classification
+#--------------------------------------------
+
+install.packages("rpart", dependencies = TRUE)
+install.packages("rpart.plot", dependencies = TRUE)
+install.packages("mlbench")
+
+library(rpart)
+library(rpart.plot)
+library(mlbench)
+
+set.seed(42)
+
+#reset variables
+training = resetTraining
+#remove ID and Target from model
+x = model.matrix(~ ., training[, c(-1,-2)])
+y = training$Target
+
+testing = resetTesting
+#remove ID and Target from model
+z = model.matrix(~ ., testing[, c(-1,-2)])
+a = testing$Target
+
+###########################
+# Decision Tree (F1: 0.5927273, sensitivity/recall: 0.46307, precision/pos pred value: 0.82323)
+###########################
+
+#build model
+rpart_model = rpart(Target ~.-ID,data = training, method="class") #use method ="anova" for regression problems
+
+#plot tree
+prp(rpart_model)
+
+
+#prediction
+rpart_predict = predict(rpart_model,testing,type="class")
+
+rpart_confusion = confusionMatrix(data = as.factor(rpart_predict), testing$Target, positive="1")
+rpart_confusion
+
+rpart_confusion$byClass["F1"] #0.5927273
+
+#                 Reference
+# Prediction      0     1
+#           0 38239   567
+#           1   105   489
+# 
+# Accuracy : 0.9829          
+# 95% CI : (0.9816, 0.9842)
+# No Information Rate : 0.9732          
+# P-Value [Acc > NIR] : < 2.2e-16       
+# 
+# Kappa : 0.5847          
+# Mcnemar's Test P-Value : < 2.2e-16       
+# 
+# Sensitivity : 0.46307         
+# Specificity : 0.99726         
+# Pos Pred Value : 0.82323         
+# Neg Pred Value : 0.98539         
+# Prevalence : 0.02680         
+# Detection Rate : 0.01241         
+# Detection Prevalence : 0.01508         
+# Balanced Accuracy : 0.73016         
+# 
+# 'Positive' Class : 1         
+
+
+###########################
+# Random Forests (F1: 0.8247978, sensitivity/recall: 0.72443, precision/pos pred value: 0.95745)
+###########################
+
+install.packages("randomForest")
+library(randomForest)
+
+#reset variables
+training = resetTraining
+#remove ID and Target from model
+x = model.matrix(~ ., training[, c(-1,-2)])
+y = training$Target
+
+testing = resetTesting
+#remove ID and Target from model
+z = model.matrix(~ ., testing[, c(-1,-2)])
+a = testing$Target
+
+#Build random forest model
+rf_model = randomForest(Target ~. -ID, data = training, importance=TRUE, xtest=testing[,c(-1,-2)], ntree=1000)
+
+#model summary
+summary(rf_model)
+
+#variables contained in model 
+names(rf_model)
+
+#predictions for test set
+test_predictions_rf = data.frame(testing, rf_model$test$predicted)
+
+rf_confusion = confusionMatrix(data = as.factor(test_predictions_rf$rf_model.test.predicted), testing$Target, positive="1")
+rf_confusion$byClass["F1"] #0.8247978
+rf_confusion
+# Confusion Matrix and Statistics
+# 
+#               Reference
+# Prediction        0     1
+#             0 38310   291
+#             1    34   765
+# 
+# Accuracy : 0.9918          
+# 95% CI : (0.9908, 0.9926)
+# No Information Rate : 0.9732          
+# P-Value [Acc > NIR] : < 2.2e-16       
+# 
+# Kappa : 0.8207          
+# Mcnemar's Test P-Value : < 2.2e-16       
+# 
+# Sensitivity : 0.72443         
+# Specificity : 0.99911         
+# Pos Pred Value : 0.95745         
+# Neg Pred Value : 0.99246         
+# Prevalence : 0.02680         
+# Detection Rate : 0.01942         
+# Detection Prevalence : 0.02028         
+# Balanced Accuracy : 0.86177         
+# 
+# 'Positive' Class : 1  
+
+#quantitative measure of variable importance
+importance(rf_model)
+#sorted plot of importance
+varImpPlot(rf_model)
+
+#mean decrease accuracy = how much of the model accuracy decreases if we drop that variable
+#high value of mean decrease accuracy or gini scores higher importance of the variable in the model
+
+
+
 
 
 
