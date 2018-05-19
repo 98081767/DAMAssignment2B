@@ -385,7 +385,20 @@ z = model.matrix(~ ., testing[, c(-1,-2)])
 a = testing$Target
 
 #Build random forest model
-rf_model = randomForest(Target ~. -ID, data = training, importance=TRUE, xtest=testing[,c(-1,-2)], ntree=1000)
+#-mytry = number of random variables selcted at each tree split (it's good to have variety for each tree to learn)
+#  default 
+#    -if regression=floor(number of varaibles/3)
+#    -if categorical=floor(sqrt(no of independent variables))
+# lower mtry means 1) less correlation between trees (good thing), 2) decreases strength of each tree. cannot predict accurately because of the limited variables (bad thing)
+
+rf_model = randomForest(Target ~. -ID, data = training, importance=TRUE, xtest=testing[,c(-1,-2)], keep.forest=TRUE, ntree=1000)
+rf_model
+#OOB estimate of  error rate: 0.79%
+#Confusion matrix:
+#      0    1  class.error
+#0 89394   78 0.0008717811
+#1   644 1821 0.2612576065
+
 
 #model summary
 summary(rf_model)
@@ -393,10 +406,17 @@ summary(rf_model)
 #variables contained in model 
 names(rf_model)
 
-#predictions for test set
-test_predictions_rf = data.frame(testing, rf_model$test$predicted)
+#probability
+test_prob_rf = predict(rf_model, testing, type="prob")
 
-rf_confusion = confusionMatrix(data = as.factor(test_predictions_rf$rf_model.test.predicted), testing$Target, positive="1")
+#predictions for test set
+test_predictions_rf = predict(rf_model, testing, type="class")
+rf_confusion = confusionMatrix(data = as.factor(test_predictions_rf), testing$Target, positive="1")
+
+#predictions for test set
+#test_predictions_rf = data.frame(testing, rf_model$test$predicted)
+#rf_confusion = confusionMatrix(data = as.factor(test_predictions_rf$rf_model.test.predicted), testing$Target, positive="1")
+
 rf_confusion$byClass["F1"] #0.8247978
 rf_confusion
 # Confusion Matrix and Statistics
@@ -433,9 +453,64 @@ varImpPlot(rf_model)
 #mean decrease accuracy = how much of the model accuracy decreases if we drop that variable
 #high value of mean decrease accuracy or gini scores higher importance of the variable in the model
 
+#top predictors
+# 1. mth_since_last_serv
+# 2. num_serv_dealer_purchased
+# 3. annualised_mileage
+# 4. age_of_vechile_years
+# 5. total_services
+
+#----------------------------------------------
+#   Predict on validation file
+#----------------------------------------------
+
+cpurvalid = read.csv("repurchase_validation.csv")
+str(cpurvalid)
+
+cpurvalid$Target                     = as.factor(0)
+cpurvalid$ID                         = as.integer(0)
+cpurvalid$age_of_vehicle_years       = as.factor(cpurvalid$age_of_vehicle_years)
+cpurvalid$sched_serv_warr            = as.factor(cpurvalid$sched_serv_warr )         
+cpurvalid$non_sched_serv_warr        = as.factor(cpurvalid$non_sched_serv_warr)
+cpurvalid$sched_serv_paid            = as.factor(cpurvalid$sched_serv_paid)
+cpurvalid$non_sched_serv_paid        = as.factor(cpurvalid$non_sched_serv_paid)
+cpurvalid$total_paid_services        = as.factor(cpurvalid$total_paid_services)
+cpurvalid$total_services             = as.factor(cpurvalid$total_services)
+cpurvalid$mth_since_last_serv        = as.factor(cpurvalid$mth_since_last_serv)
+cpurvalid$annualised_mileage         = as.factor(cpurvalid$annualised_mileage)
+cpurvalid$num_dealers_visited        = as.factor(cpurvalid$num_dealers_visited)
+cpurvalid$num_serv_dealer_purchased  = as.factor(cpurvalid$num_serv_dealer_purchased)
+
+summary(cpurvalid)
+
+str(cpurvalid)
+cpurvalid = cpurvalid[c(17,16,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15)]
+str(cpurvalid)
+
+firstrow = training[1,]
+
+cpurvalid = rbind(training[1,], cpurvalid)
+cpurvalid = cpurvalid[-1,]
 
 
+#probability
+cpurvalid.prob_rf = predict(rf_model, cpurvalid, type="prob")
+cpurvalid.prob_rf = as.data.frame(cpurvalid.prob_rf)
+cpurvalid$prob_0 = as.numeric(cpurvalid.prob_rf[,1])
+cpurvalid$prob_1 = as.numeric(cpurvalid.prob_rf[,2])
 
+#predictions for test set
+cpurvalid.predictions_rf = predict(rf_model, cpurvalid, type="class")
+
+cpurvalid$Target = cpurvalid.predictions_rf
+cpurvalid.predTarget = nrow(cpurvalid[cpurvalid$Target=="1",]) #1235
+#proportion of target predicted
+cpurvalid.predTarget / nrow(cpurvalid) #0.0247 -similar to training proportion
+
+write.csv(cpurvalid, "predicted_repurchase_validation.csv")
+
+
+#---------------------- END ---------------------------
 
 
 
