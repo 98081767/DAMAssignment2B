@@ -85,7 +85,10 @@ train = createDataPartition(y = cpur$Target, p = 0.7, list = F)
 
 # partition purchase data into two sets 
 training = cpur[train, ]
+resetTraining = training
 testing = cpur[-train, ]
+resetTesting = testing
+
 str(training)
 str(testing)
 
@@ -105,15 +108,20 @@ nrow(training[training$Target=="0",]) #89472 - non targets in training
 #---------------------------
 # Create models
 #---------------------------
-glmodel = "Target ~. -ID" #all variables
-#glmodel = "Target ~ gender - ID"
 
 #include all except for identifier (ID)
+glmodel = "Target ~. -ID" #all variables (AIC: 9078, F1: 0.660561, sensitivity: 0.54640)
+
+#glmodel = "Target ~ -ID + gender + car_model + age_of_vehicle_years + sched_serv_warr + non_sched_serv_warr + sched_serv_paid + non_sched_serv_paid + total_services + mth_since_last_serv + annualised_mileage + num_dealers_visited + num_serv_dealer_purchased"
+#(AIC: 9118, F1: 0.6613181, sensitivity: 0.54640)
+
+#glmodel = "Target ~ gender - ID" (AIC: 22569, F1: NA, sensitivity: 0.0000)
+
 cpur.glm = glm(formula = glmodel,
              data = training,
              family = "binomial")
 summary(cpur.glm)
-#AIC: 9016
+#AIC: 9078
 
 
 ###########################
@@ -129,65 +137,163 @@ testing$prediction = "0"
 testing[testing$probability >= 0.5, "prediction"] = "1"
 
 
-# Have a look at the data
-#head(testing)
-
 ###########################
-# Evaluation
-
-# Create a confusion matrix (along with other measures) using the 
-# function 'confusionMatrix' from the caret package
-myPred = as.factor(testing$prediction)
-#str(myPred)
-#str(testing$prediction)
-#str(testing$Target)
-#testing$prediction
-#testing$Target
+# Evaluation using confusion matrix
+###########################
 
 #set Target=1 as the focus for confusion matrix
-cm = confusionMatrix(data = myPred, testing$Target, positive="1")
+cm = confusionMatrix(data = as.factor(testing$prediction), testing$Target, positive="1")
 #get F1 score
-cm$byClass["F1"] #0.6553341
+cm$byClass["F1"] #0.660561
 
 #summary
 cm
-#                 Reference
+#               Reference
 # Prediction      0     1
-#           0 38253   497
-#           1    91   559     
+#         0   38230   479
+#         1     114   577
 # 
-# Accuracy : 0.9851          
-# 95% CI : (0.9838, 0.9863)
+# Accuracy : 0.9849          
+# 95% CI : (0.9837, 0.9861)
 # No Information Rate : 0.9732          
 # P-Value [Acc > NIR] : < 2.2e-16       
 # 
-# Kappa : 0.6481          
+# Kappa : 0.6532          
 # Mcnemar's Test P-Value : < 2.2e-16       
 # 
-# Sensitivity : 0.52936         
-# Specificity : 0.99763         
-# Pos Pred Value : 0.86000         
-# Neg Pred Value : 0.98717         
+# Sensitivity : 0.54640         
+# Specificity : 0.99703         
+# Pos Pred Value : 0.83502         
+# Neg Pred Value : 0.98763         
 # Prevalence : 0.02680         
-# Detection Rate : 0.01419         
-# Detection Prevalence : 0.01650         
-# Balanced Accuracy : 0.76349         
+# Detection Rate : 0.01464         
+# Detection Prevalence : 0.01754         
+# Balanced Accuracy : 0.77171         
 # 
-# 'Positive' Class : 1     
+# 'Positive' Class : 1          
+
+#-------------------------------------------
+# Lasso & Ridge check
+#--------------------------------------------
+
+install.packages("glmnet")
+library(glmnet)
+
+###########################
+# Lasso Regression (F1 - 0.6524002, sensitivity: 0.53409)
+###########################
+
+#reset variables
+training = resetTraining
+#remove ID and Target from model
+x = model.matrix(~ ., training[, c(-1,-2)])
+y = training$Target
+
+testing = resetTesting
+#remove ID and Target from model
+z = model.matrix(~ ., testing[, c(-1,-2)])
+a = testing$Target
+
+set.seed(42)
+
+# alpha = 1 specifies lasso regression
+cv.fit_lasso = cv.glmnet(x, y, family = 'binomial', alpha = 1)
+
+# Results
+plot(cv.fit_lasso)
+cv.fit_lasso$lambda.min #error measure. can choose either
+cv.fit_lasso$lambda.1se #error measure. can choose either
+coef(cv.fit_lasso, s = cv.fit_lasso$lambda.min)
+
+prediction_lasso = predict(cv.fit_lasso$glmnet.fit, newx =z, type = "class", s = cv.fit_lasso$lambda.min)
+
+lasso_confusion = confusionMatrix(data = as.factor(prediction_lasso), a, positive="1")
+lasso_confusion
+#                 Reference
+# Prediction      0     1
+#           0 38235   492
+#           1   109   564
+# 
+# Accuracy : 0.9847          
+# 95% CI : (0.9835, 0.9859)
+# No Information Rate : 0.9732          
+# P-Value [Acc > NIR] : < 2.2e-16       
+# 
+# Kappa : 0.645           
+# Mcnemar's Test P-Value : < 2.2e-16       
+# 
+# Sensitivity : 0.53409         
+# Specificity : 0.99716         
+# Pos Pred Value : 0.83804         
+# Neg Pred Value : 0.98730         
+# Prevalence : 0.02680         
+# Detection Rate : 0.01431         
+# Detection Prevalence : 0.01708         
+# Balanced Accuracy : 0.76562         
+# 
+# 'Positive' Class : 1          
+
+lasso_confusion$byClass["F1"] #0.6524002
+
+###########################
+# Ridge Regression (F1 - 0.4292893, sensitivity - 0.283144)
+###########################
+
+#reset variables
+training = resetTraining
+#remove ID and Target from model
+x = model.matrix(~ ., training[, c(-1,-2)])
+y = training$Target
+
+testing = resetTesting
+#remove ID and Target from model
+z = model.matrix(~ ., testing[, c(-1,-2)])
+a = testing$Target
+
+set.seed(42)
+
+# alpha = 0 specifies ridge regression
+cv.fit_ridge = cv.glmnet(x, y, family = 'binomial', alpha = 0)
+
+# Results
+plot(cv.fit_ridge)
+cv.fit_ridge$lambda.min
+cv.fit_ridge$lambda.1se
+
+#shows the coefficents
+coef(cv.fit_ridge, s = cv.fit_ridge$lambda.min)
+
+prediction_ridge = predict(cv.fit_ridge$glmnet.fit, newx=z, type="class", s = cv.fit_ridge$lambda.min)
 
 
+#set Target=1 as the focus for confusion matrix
+ridge_confusion = confusionMatrix(data = as.factor(prediction_ridge), testing$Target, positive="1")
+ridge_confusion
+#               Reference
+# Prediction        0     1
+#             0 38306   757
+#             1    38   299
+# 
+# Accuracy : 0.9798          
+# 95% CI : (0.9784, 0.9812)
+# No Information Rate : 0.9732          
+# P-Value [Acc > NIR] : < 2.2e-16       
+# 
+# Kappa : 0.4218          
+# Mcnemar's Test P-Value : < 2.2e-16       
+# 
+# Sensitivity : 0.283144        
+# Specificity : 0.999009        
+# Pos Pred Value : 0.887240        
+# Neg Pred Value : 0.980621        
+# Prevalence : 0.026802        
+# Detection Rate : 0.007589        
+# Detection Prevalence : 0.008553        
+# Balanced Accuracy : 0.641076        
+# 
+# 'Positive' Class : 1  
 
-# ------------- 
-# Run PCA
-# -------------
-
-install.packages("pls")
-library(pls)
-
-
-
-
-
+ridge_confusion$byClass["F1"] #0.4292893 
 
 
 
