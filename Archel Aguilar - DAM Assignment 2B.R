@@ -69,6 +69,10 @@ summary(cpur)
 
 str(cpur)
 
+contrasts(cpur$age_band)
+contrasts(cpur$gender)
+contrasts(cpur$car_segment)
+
 
 #---------------------------------------------
 # Create train and test data
@@ -146,31 +150,31 @@ testing[testing$probability >= 0.5, "prediction"] = "1"
 #set Target=1 as the focus for confusion matrix
 cm = confusionMatrix(data = as.factor(testing$prediction), testing$Target, positive="1")
 #get F1 score
-cm$byClass["F1"] #0.660561
+cm$byClass["F1"] #0.6553341
 
 #summary
 cm
 #               Reference
 # Prediction      0     1
-#         0   38230   479
-#         1     114   577
+#           0 38253   497
+#           1    91   559
 # 
-# Accuracy : 0.9849          
-# 95% CI : (0.9837, 0.9861)
+# Accuracy : 0.9851          
+# 95% CI : (0.9838, 0.9863)
 # No Information Rate : 0.9732          
 # P-Value [Acc > NIR] : < 2.2e-16       
 # 
-# Kappa : 0.6532          
+# Kappa : 0.6481          
 # Mcnemar's Test P-Value : < 2.2e-16       
 # 
-# Sensitivity : 0.54640         
-# Specificity : 0.99703         
-# Pos Pred Value : 0.83502         
-# Neg Pred Value : 0.98763         
+# Sensitivity : 0.52936         
+# Specificity : 0.99763         
+# Pos Pred Value : 0.86000         
+# Neg Pred Value : 0.98717         
 # Prevalence : 0.02680         
-# Detection Rate : 0.01464         
-# Detection Prevalence : 0.01754         
-# Balanced Accuracy : 0.77171         
+# Detection Rate : 0.01419         
+# Detection Prevalence : 0.01650         
+# Balanced Accuracy : 0.76349         
 # 
 # 'Positive' Class : 1          
 
@@ -200,12 +204,19 @@ set.seed(42)
 
 # alpha = 1 specifies lasso regression
 cv.fit_lasso = cv.glmnet(x, y, family = 'binomial', alpha = 1)
+#lambda is the strength of the penalty on the coefficients
+#as lambda gets larger, ths bias is unchanged but the variance drops
+
 
 # Results
 plot(cv.fit_lasso)
 cv.fit_lasso$lambda.min #error measure. can choose either
 cv.fit_lasso$lambda.1se #error measure. can choose either
-coef(cv.fit_lasso, s = cv.fit_lasso$lambda.min)
+
+cv.lasso_coef = coef(cv.fit_lasso, s = cv.fit_lasso$lambda.min)
+cv.lasso_coef
+#co-efficients with the largest +ve result provide the biggest change to the baseline factor
+
 
 prediction_lasso = predict(cv.fit_lasso$glmnet.fit, newx =z, type = "class", s = cv.fit_lasso$lambda.min)
 
