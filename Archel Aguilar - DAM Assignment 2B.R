@@ -96,6 +96,10 @@ resetTesting = testing
 str(training)
 str(testing)
 
+#---------------------------------------------
+# Analyse data
+#---------------------------------------------
+
 nrow(cpur)     #131,337
 nrow(training)  #91,937
 nrow(testing)   #39,400
@@ -107,6 +111,29 @@ nrow(cpur[cpur$Target=="0",]) #127816 - number of non targets
 nrow(training[training$Target=="1",]) #2465 - targets in trainng
 nrow(training[training$Target=="0",]) #89472 - non targets in training
 #proportion of targets in data = 0.0268
+
+install.packages("ggplot2")
+library(ggplot2)
+library(scales)
+
+#frequency charts
+ggplot(data.frame(cpur$Target), aes(x=cpur$Target)) + geom_bar() + xlab("Customer Repurchased a Vechicle (1=Yes, 0=No)") + scale_y_continuous(labels = comma)
+ggplot(data.frame(cpur$age_band), aes(x=cpur$age_band)) + geom_bar() + xlab("Age Band")
+ggplot(data.frame(cpur$gender), aes(x=cpur$gender)) + geom_bar() + xlab("Gender")
+ggplot(data.frame(cpur$car_model), aes(x=cpur$car_model)) + geom_bar() + xlab("Car Model")
+ggplot(data.frame(cpur$car_segment), aes(x=cpur$car_segment)) + geom_bar() + xlab("Car Type")
+ggplot(data.frame(cpur$age_of_vehicle_years), aes(x=cpur$age_of_vehicle_years)) + geom_bar() + xlab("Vehicle Age (Deciles)")
+ggplot(data.frame(cpur$sched_serv_warr), aes(x=cpur$sched_serv_warr)) + geom_bar() + xlab("# Scheduled services (Deciles)")
+ggplot(data.frame(cpur$non_sched_serv_warr), aes(x=cpur$non_sched_serv_warr)) + geom_bar() + xlab("# Non-Scheduled services (Deciles)")
+ggplot(data.frame(cpur$sched_serv_paid), aes(x=cpur$sched_serv_paid)) + geom_bar() + xlab("Amount paid for scheduled services (Deciles)")
+ggplot(data.frame(cpur$non_sched_serv_paid), aes(x=cpur$non_sched_serv_paid)) + geom_bar() + xlab("Amount paid for non scheduled services (Deciles)")
+ggplot(data.frame(cpur$total_paid_services), aes(x=cpur$total_paid_services)) + geom_bar() + xlab("Amount paid for all services (Deciles)")
+ggplot(data.frame(cpur$total_services), aes(x=cpur$total_services)) + geom_bar() + xlab("Total # services (Deciles)")
+ggplot(data.frame(cpur$mth_since_last_serv), aes(x=cpur$mth_since_last_serv)) + geom_bar() + xlab("Months since last service (Deciles)")
+ggplot(data.frame(cpur$annualised_mileage), aes(x=cpur$annualised_mileage)) + geom_bar() + xlab("Months since last service (Deciles)")
+ggplot(data.frame(cpur$num_dealers_visited), aes(x=cpur$num_dealers_visited)) + geom_bar() + xlab("Number of dealers visited for servicing (Deciles)")
+ggplot(data.frame(cpur$num_serv_dealer_purchased), aes(x=cpur$num_serv_dealer_purchased)) + geom_bar() + xlab("Number of services at purchased dealer (Deciles)")
+
 
 
 #---------------------------
@@ -493,6 +520,28 @@ cpurvalid$num_dealers_visited        = as.factor(cpurvalid$num_dealers_visited)
 cpurvalid$num_serv_dealer_purchased  = as.factor(cpurvalid$num_serv_dealer_purchased)
 
 summary(cpurvalid)
+
+#------------------
+# check data
+#------------------
+#frequency charts
+ggplot(data.frame(cpurvalid$age_band), aes(x=cpurvalid$age_band)) + geom_bar() + xlab("Age Band")
+ggplot(data.frame(cpurvalid$gender), aes(x=cpurvalid$gender)) + geom_bar() + xlab("Gender")
+ggplot(data.frame(cpurvalid$car_model), aes(x=cpurvalid$car_model)) + geom_bar() + xlab("Car Model")
+ggplot(data.frame(cpurvalid$car_segment), aes(x=cpurvalid$car_segment)) + geom_bar() + xlab("Car Type")
+ggplot(data.frame(cpurvalid$age_of_vehicle_years), aes(x=cpurvalid$age_of_vehicle_years)) + geom_bar() + xlab("Vehicle Age (Deciles)")
+ggplot(data.frame(cpurvalid$sched_serv_warr), aes(x=cpurvalid$sched_serv_warr)) + geom_bar() + xlab("# Scheduled services (Deciles)")
+ggplot(data.frame(cpurvalid$non_sched_serv_warr), aes(x=cpurvalid$non_sched_serv_warr)) + geom_bar() + xlab("# Non-Scheduled services (Deciles)")
+ggplot(data.frame(cpurvalid$sched_serv_paid), aes(x=cpurvalid$sched_serv_paid)) + geom_bar() + xlab("Amount paid for scheduled services (Deciles)")
+ggplot(data.frame(cpurvalid$non_sched_serv_paid), aes(x=cpurvalid$non_sched_serv_paid)) + geom_bar() + xlab("Amount paid for non scheduled services (Deciles)")
+ggplot(data.frame(cpurvalid$total_paid_services), aes(x=cpurvalid$total_paid_services)) + geom_bar() + xlab("Amount paid for all services (Deciles)")
+ggplot(data.frame(cpurvalid$total_services), aes(x=cpurvalid$total_services)) + geom_bar() + xlab("Total # services (Deciles)")
+ggplot(data.frame(cpurvalid$mth_since_last_serv), aes(x=cpurvalid$mth_since_last_serv)) + geom_bar() + xlab("Months since last service (Deciles)")
+ggplot(data.frame(cpurvalid$annualised_mileage), aes(x=cpurvalid$annualised_mileage)) + geom_bar() + xlab("Months since last service (Deciles)")
+ggplot(data.frame(cpurvalid$num_dealers_visited), aes(x=cpurvalid$num_dealers_visited)) + geom_bar() + xlab("Number of dealers visited for servicing (Deciles)")
+ggplot(data.frame(cpurvalid$num_serv_dealer_purchased), aes(x=cpurvalid$num_serv_dealer_purchased)) + geom_bar() + xlab("Number of services at purchased dealer (Deciles)")
+
+
 
 str(cpurvalid)
 cpurvalid = cpurvalid[c(17,16,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15)]
