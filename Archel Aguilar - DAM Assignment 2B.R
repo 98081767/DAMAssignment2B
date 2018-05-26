@@ -44,7 +44,7 @@ rm(list=ls())
 install.packages("ISLR")
 library(ISLR)
 
-setwd("C:/Users/arche/Documents/UTS/R-References/R-references-Git/DAM-Assignment-2B")
+setwd("C:/Users/arche/Documents/UTS/R-References/R-references-Git/DAMAssignment2B")
 #setwd("C:/Personal/UTS/R-References/R-references-Git/DAMAssignment2B")
 
 getwd()
